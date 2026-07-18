@@ -76,9 +76,10 @@ impl From<PathBuf> for SearchDir {
             Ok(read_dir) => {
                 let timers = read_dir.into_iter().filter_map(|entry| {
                     entry.ok().map(|entry| {
-                        if entry.path().extension() == Some(&OsString::from("grntimer")) {
-                            GreenTimer::from(entry.path())
-                        }
+                        todo!()
+                        // if entry.path().extension() == Some(&OsString::from("grntimer")) {
+                        //     GreenTimer::new(entry.path())
+                        // }
                     })
                 }).collect();
 
