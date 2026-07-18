@@ -1,0 +1,15 @@
+[Schedule]
+day month weekday
+x x * # every weekday
+* x x # every day
+* 10,11 x # day 1 of every October and November (defaults to day 1)
+2-5 3/5 x # days 2-5, every fifth month from March
+
+
+[Except]
+minute hour day month weekday
+1-15 * * * * # not at 1-15 minutes past every hour, every day
+1-59 * * * 7,0 # not at 1-15 minutes past every hour, every Saturday and Sunday
+* 9-17 * * 1-6 # not between 9.00 and 17.00 every Monday to Friday
+
+[History]
