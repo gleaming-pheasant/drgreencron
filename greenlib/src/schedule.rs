@@ -1,6 +1,6 @@
-use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
+use crate::DayOfMonth;
 use crate::errors::Error;
 
 /// All fields are u64, even where the CronField is just DOW or month (u8 and 
@@ -20,7 +20,7 @@ impl CronField {
 /// minute).
 #[derive(Debug)]
 pub struct Schedule {
-    dom: CronField, // max 31
+    dom: DayOfMonth,
     month: CronField, // max 11
     dow: CronField // max 6
 }

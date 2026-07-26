@@ -12,3 +12,7 @@ The background process which operates carbon-aware task timers.
 
 ## [greentab](./greentab/)
 The greencron equivalent to crontab, creates and updates tasks.
+
+## [greenlib](./greenlib/)
+Types and functions used by both `drgreencrond` and `greentab`, such as 
+scheduler parsers.

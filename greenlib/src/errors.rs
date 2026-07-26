@@ -12,6 +12,8 @@ pub enum Error {
     ParseError(String)
 }
 
+// just here for ease of using `?` propagator. If this error is returned, the 
+// Error itself is in trouble!
 impl From<std::fmt::Error> for Error {
     fn from(value: std::fmt::Error) -> Self {
         Self::FmtError(value)

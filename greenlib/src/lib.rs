@@ -2,8 +2,8 @@
 While each period (DayOfMonth, DayOfWeek, etc.) could be defined by a single u64 
 wrapper type with shared functions (and only a small amount of overhead, for 
 actual bytes needed), the need to provide each type with a distinct MAX value 
-and means of parsing `FromStr` meant a struct for each was the most logical 
-option. */
+and means of parsing `FromStr` (e.g. due to only day and month requiring 
+skipping parsing `0`) meant a struct for each was the most logical option. */
 mod dom;
 mod errors;
 mod schedule;
