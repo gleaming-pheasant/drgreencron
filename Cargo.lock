@@ -180,8 +180,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "greenlib"
+version = "0.1.0"
+dependencies = [
+ "time",
+]
+
+[[package]]
 name = "greentab"
 version = "0.1.0"
+dependencies = [
+ "greenlib",
+]
 
 [[package]]
 name = "hashbrown"
