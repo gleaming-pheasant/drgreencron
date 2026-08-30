@@ -29,5 +29,7 @@ fn main() {
         }
     }
 
+    let timers = timers::Timers::fetch(); // Validates both files are present. 
+
     let dirs = dirs::Dirs::from_env();
 }

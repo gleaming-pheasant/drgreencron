@@ -7,8 +7,11 @@ skipping parsing `0`) meant a struct for each was the most logical option. */
 mod dom;
 mod errors;
 mod schedule;
+mod timers;
 pub(crate) mod utils;
 
 pub use dom::DayOfMonth;
-pub use errors::Error;
+pub use errors::LibError;
 pub use schedule::{ExceptSchedule, Schedule};
+
+pub(crate) type LibResult<T> = Result<T, errors::LibError>;
