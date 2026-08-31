@@ -5,6 +5,9 @@ use crate::{LibError, LibResult, errors::ScheduleParseError};
 mod parse_buffer;
 use parse_buffer::ScheduleBuffer;
 
+pub const DOW_MIN: u8 = 0;
+pub const DOW_MAX: u8 = 6;
+
 pub const DAY_MIN: u8 = 1;
 pub const DAY_MAX: u8 = 31;
 
@@ -14,7 +17,7 @@ pub struct Day {
 }
 
 impl Day {
-    /// Create a new `DayOfWeek` with no bits set.
+    /// Create a new `Day` with no bits set.
     /// 
     /// This differs from `default`, which has all valid bits set.
     #[inline(always)]
@@ -115,8 +118,54 @@ impl DayOfWeek {
     /// Create a new `DayOfWeek` with no bits set.
     /// 
     /// This differs from `default`, which has all valid bits set.
-    fn empty() -> Self {
+    #[inline(always)]
+    pub fn empty() -> Self {
         Self { bits: 0 }
+    }
+
+    #[inline(always)]
+    pub fn is_set(&self, position: u32) -> bool {
+        self.bits & (1u8 << position) != 0
+    }
+
+    /// Set a single day for this `DayOfWeek`, from its u8 value.
+    /// 
+    /// It is the responsibility of the caller to guarnatee that "7" has been parsed as "0" for 
+    /// Sunday.
+    #[inline(always)]
+    pub fn set(&mut self, day: u8) -> LibResult<()> {
+        if !(DOW_MIN..DOW_MAX + 1).contains(&day) {
+            return Err(ScheduleParseError::InvalidValue.into());
+        }
+
+        self.bits |= 1 << day;
+
+        Ok(())
+    }
+
+    /// Set a range of days for this `DayOfWeek`, from a `from` and an `until` value.
+    /// 
+    /// Ensures that `from` is before `until`.
+    /// 
+    /// It is the responsibility of the caller to guarnatee that "7" has been parsed as "0" for 
+    /// Sunday.
+    #[inline(always)]
+    pub fn set_range(&mut self, from: u8, until: u8) -> LibResult<()> {
+        if from >= until {
+            return Err(ScheduleParseError::BadRange.into());
+        }
+
+        let range = DOW_MIN..DOW_MAX + 1;
+
+        if !range.contains(&from) || !range.contains(&until) {
+            return Err(ScheduleParseError::InvalidValue.into());
+        }
+
+        for day in from..until + 1 {
+            self.bits |= 1 << day;
+        }
+
+        Ok(())
     }
 }
 
