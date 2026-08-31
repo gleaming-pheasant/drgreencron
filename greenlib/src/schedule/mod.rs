@@ -5,10 +5,8 @@ use crate::{LibError, LibResult, errors::ScheduleParseError};
 mod parse_buffer;
 use parse_buffer::ScheduleBuffer;
 
-pub const DEFAULT_SCHEDULE: &'static str = "* * *";
-
 pub const DAY_MIN: u8 = 1;
-pub const DAY_MAX: u8 = 1;
+pub const DAY_MAX: u8 = 31;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Day {
@@ -19,20 +17,21 @@ impl Day {
     /// Create a new `DayOfWeek` with no bits set.
     /// 
     /// This differs from `default`, which has all valid bits set.
+    #[inline(always)]
     pub fn empty() -> Self {
         Self { bits: 0 }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_set(&self, position: u32) -> bool {
         self.bits & (1u32 << position) != 0
     }
 
     /// Set a single day for this `Day`, from its u8 value.
-    #[inline]
-    pub fn set_day(&mut self, day: u8) -> LibResult<()> {
+    #[inline(always)]
+    pub fn set(&mut self, day: u8) -> LibResult<()> {
         if !(DAY_MIN..DAY_MAX + 1).contains(&day) {
-            return Err(ScheduleParseError::InvalidValue { field: "day", value: day }.into());
+            return Err(ScheduleParseError::InvalidValue.into());
         }
 
         self.bits |= 1u32 << day;
@@ -43,12 +42,16 @@ impl Day {
     /// Set a range of days for this `Day`, from a `from` and an `until` value.
     /// 
     /// Ensures that `from` is before `until`.
-    #[inline]
-    pub fn set_day_range(&mut self, from: u8, until: u8) -> LibResult<()> {
+    #[inline(always)]
+    pub fn set_range(&mut self, from: u8, until: u8) -> LibResult<()> {
+        if from >= until {
+            return Err(ScheduleParseError::BadRange.into());
+        }
+
         let range = DAY_MIN..DAY_MAX + 1;
 
         if !range.contains(&from) || !range.contains(&until) {
-            return Err(ScheduleParseError::InvalidValue { field: "day", value: from }.into());
+            return Err(ScheduleParseError::InvalidValue.into());
         }
 
         for day in from..until + 1 {
@@ -62,7 +65,7 @@ impl Day {
 impl Default for Day {
     fn default() -> Self {
         Self {
-            bits: 0b0111_1111_1111_1111_1111_1111_1111_1111
+            bits: 0xFF_FF_FF_FE
         }
     }
 }
@@ -89,7 +92,7 @@ impl Month {
 
 impl Default for Month {
     fn default() -> Self {
-        Self { bits: 0b0000_1111_1111_1111 }
+        Self { bits: 0x1F_FE }
     }
 }
 

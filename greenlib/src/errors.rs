@@ -3,18 +3,20 @@ use std::fmt::Display;
 #[derive(Debug)]
 pub enum ScheduleParseError {
     /// Must be inserted in the actual order, where `from` must be a lower value than `to`.
-    BadRange{from: String, to: String},
-    InvalidToken(String),
-    InvalidValue {field: &'static str, value: u8},
+    BadRange,
+    InvalidDigit,
+    InvalidValue,
+    TooLong,
     TooShort
 }
 
 impl Display for ScheduleParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::BadRange {from, to} => write!(f, "range is invalid, {to} cannot come before {from}"),
-            Self::InvalidToken(token) => write!(f, "{token} is not a valid schedule value"),
-            Self::InvalidValue { field, value } => write!(f, "\"{value}\" is not a valid {field}"),
+            Self::BadRange => f.write_str("a range must begin with the lower value"),
+            Self::InvalidDigit => f.write_str("encountered invalid digit in schedule"),
+            Self::InvalidValue => f.write_str("encountered invalid value in schedule"),
+            Self::TooLong => f.write_str("schedule is too long"),
             Self::TooShort => f.write_str("Schedule is not long enough, must be at least \"* * *\"")
         }
     }
