@@ -51,6 +51,13 @@ impl<'a> ScheduleBuffer<'a> {
             return Err(ScheduleParseError::TooShort.into());
         }
 
+        // prevent infinite parsing of valid values. parse individual components doesn't actually 
+        // verify that a bit has already been set, so a malicious function could call 
+        // "1,1,1,1,1,1,1..." indefinitely.
+        if self.len > MAX_SCHEDULE_LEN {
+            return Err(ScheduleParseError::TooLong.into());
+        }
+
         let mut sched = Schedule::default();
 
         if self.buf == DEFAULT_SCHEDULE.as_bytes() {
