@@ -28,6 +28,6 @@ fn main() {
             tracing::error!("couldn't connect to journald: {}", e);
         }
     }
-
+    
     let dirs = dirs::Dirs::from_env();
 }
