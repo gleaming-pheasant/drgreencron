@@ -34,7 +34,6 @@ impl Date {
 
         let day = doy - (153 * mp + 2) / 5 + 1;         // 1..31
         let month = if mp < 10 { mp + 3 } else { mp - 9 }; // 1..12
-        let _year = y + if month <= 2 { 1 } else { 0 };
 
         Self {
             day: day as u8,
