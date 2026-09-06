@@ -6,6 +6,7 @@ pub enum ScheduleParseError {
     BadRange,
     InvalidDayOfWeek,
     InvalidDigit,
+    InvalidMonth,
     InvalidValue,
     TooLong,
     TooShort
@@ -17,6 +18,7 @@ impl Display for ScheduleParseError {
             Self::BadRange => f.write_str("a range must begin with the lower value"),
             Self::InvalidDayOfWeek => f.write_str("encountered invalid day of the week name"),
             Self::InvalidDigit => f.write_str("encountered invalid digit in schedule"),
+            Self::InvalidMonth => f.write_str("encountered invalid month name"),
             Self::InvalidValue => f.write_str("encountered invalid value in schedule"),
             Self::TooLong => f.write_str("schedule is too long"),
             Self::TooShort => f.write_str("schedule is not long enough, must be at least \"* * *\"")

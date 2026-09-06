@@ -12,7 +12,7 @@ pub const DAY_MIN: u8 = 1;
 pub const DAY_MAX: u8 = 31;
 
 pub const MONTH_MIN: u8 = 1;
-pub const MONTH_MAX: u8 = 1;
+pub const MONTH_MAX: u8 = 12;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Day {
@@ -37,7 +37,7 @@ impl Day {
     /// Set a single day for this `Day`, from its u8 value.
     #[inline]
     pub fn set(&mut self, day: u8) -> LibResult<()> {
-        if !(DAY_MIN..DAY_MAX + 1).contains(&day) {
+        if !(DAY_MIN..=DAY_MAX).contains(&day) {
             return Err(ScheduleParseError::InvalidValue.into());
         }
 
@@ -54,13 +54,13 @@ impl Day {
             return Err(ScheduleParseError::BadRange.into());
         }
 
-        let range = DAY_MIN..DAY_MAX + 1;
+        let range = DAY_MIN..=DAY_MAX;
 
         if !range.contains(&from) || !range.contains(&until) {
             return Err(ScheduleParseError::InvalidValue.into());
         }
 
-        for day in from..until + 1 {
+        for day in from..=until {
             self.bits |= 1u32 << day;
         }
 
@@ -82,18 +82,18 @@ pub struct Month{
 }
 
 impl Month {
-    pub const JAN: Self = Self { bits: 0b0000_0000_0000_0001 };
-    pub const FEB: Self = Self { bits: 0b0000_0000_0000_0010 };
-    pub const MAR: Self = Self { bits: 0b0000_0000_0000_0100 };
-    pub const APR: Self = Self { bits: 0b0000_0000_0000_1000 };
-    pub const MAY: Self = Self { bits: 0b0000_0000_0001_0000 };
-    pub const JUN: Self = Self { bits: 0b0000_0000_0010_0000 };
-    pub const JUL: Self = Self { bits: 0b0000_0000_0100_0000 };
-    pub const AUG: Self = Self { bits: 0b0000_0000_1000_0000 };
-    pub const SEP: Self = Self { bits: 0b0000_0001_0000_0000 };
-    pub const OCT: Self = Self { bits: 0b0000_0010_0000_0000 };
-    pub const NOV: Self = Self { bits: 0b0000_0100_0000_0000 };
-    pub const DEC: Self = Self { bits: 0b0000_1000_0000_0000 };
+    pub const JAN: Self = Self { bits: 0b0000_0000_0000_0010 };
+    pub const FEB: Self = Self { bits: 0b0000_0000_0000_0100 };
+    pub const MAR: Self = Self { bits: 0b0000_0000_0000_1000 };
+    pub const APR: Self = Self { bits: 0b0000_0000_0001_0000 };
+    pub const MAY: Self = Self { bits: 0b0000_0000_0010_0000 };
+    pub const JUN: Self = Self { bits: 0b0000_0000_0100_0000 };
+    pub const JUL: Self = Self { bits: 0b0000_0000_1000_0000 };
+    pub const AUG: Self = Self { bits: 0b0000_0001_0000_0000 };
+    pub const SEP: Self = Self { bits: 0b0000_0010_0000_0000 };
+    pub const OCT: Self = Self { bits: 0b0000_0100_0000_0000 };
+    pub const NOV: Self = Self { bits: 0b0000_1000_0000_0000 };
+    pub const DEC: Self = Self { bits: 0b0001_0000_0000_0000 };
 
     /// Create a new `Month` with no bits set.
     /// 
@@ -112,7 +112,7 @@ impl Month {
     /// Set a single day for this `Month`, from its u8 value.
     #[inline]
     pub fn set(&mut self, month: u8) -> LibResult<()> {
-        if !(MONTH_MIN..MONTH_MAX + 1).contains(&month) {
+        if !(MONTH_MIN..=MONTH_MAX).contains(&month) {
             return Err(ScheduleParseError::InvalidValue.into());
         }
 
@@ -129,14 +129,14 @@ impl Month {
             return Err(ScheduleParseError::BadRange.into());
         }
 
-        let range = MONTH_MIN..MONTH_MAX + 1;
+        let range = MONTH_MIN..=MONTH_MAX;
 
         if !range.contains(&from) || !range.contains(&until) {
             return Err(ScheduleParseError::InvalidValue.into());
         }
 
-        for day in from..until + 1 {
-            self.bits |= 1u16 << day;
+        for month in from..=until {
+            self.bits |= 1u16 << month;
         }
 
         Ok(())
@@ -155,13 +155,13 @@ pub struct DayOfWeek {
 }
 
 impl DayOfWeek {
-    pub const SUN: Self = Self { bits: 0b0000_0001 };
     pub const MON: Self = Self { bits: 0b0000_0010 };
     pub const TUE: Self = Self { bits: 0b0000_0100 };
     pub const WED: Self = Self { bits: 0b0000_1000 };
     pub const THU: Self = Self { bits: 0b0001_0000 };
     pub const FRI: Self = Self { bits: 0b0010_0000 };
     pub const SAT: Self = Self { bits: 0b0100_0000 };
+    pub const SUN: Self = Self { bits: 0b1000_0000 };
 
     /// Create a new `DayOfWeek` with no bits set.
     /// 
@@ -182,12 +182,12 @@ impl DayOfWeek {
     /// It is the responsibility of the caller to guarnatee that "7" has been parsed as "0" for 
     /// Sunday.
     #[inline]
-    pub fn set(&mut self, day: u8) -> LibResult<()> {
-        if !(DOW_MIN..DOW_MAX + 1).contains(&day) {
+    pub fn set(&mut self, dow: u8) -> LibResult<()> {
+        if !(DOW_MIN..=DOW_MAX).contains(&dow) {
             return Err(ScheduleParseError::InvalidValue.into());
         }
 
-        self.bits |= 1 << day;
+        self.bits |= 1 << dow;
 
         Ok(())
     }
@@ -203,14 +203,14 @@ impl DayOfWeek {
             return Err(ScheduleParseError::BadRange.into());
         }
 
-        let range = DOW_MIN..DOW_MAX + 1;
+        let range = DOW_MIN..=DOW_MAX;
 
         if !range.contains(&from) || !range.contains(&until) {
             return Err(ScheduleParseError::InvalidValue.into());
         }
 
-        for day in from..until + 1 {
-            self.bits |= 1 << day;
+        for dow in from..=until {
+            self.bits |= 1 << dow;
         }
 
         Ok(())
@@ -219,7 +219,7 @@ impl DayOfWeek {
 
 impl Default for DayOfWeek {
     fn default() -> Self {
-        Self { bits: 0b0111_1111 }
+        Self { bits: 0b1111_1110 }
     }
 }
 

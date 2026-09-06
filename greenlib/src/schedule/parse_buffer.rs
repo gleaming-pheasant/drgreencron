@@ -150,7 +150,10 @@ impl<'a> ScheduleBuffer<'a> {
 
     fn parse_month(&mut self) -> LibResult<Month> {
         // safe ONLY because new() has validated the length. Update here if that ever changes. Test.
-        if self.buf[self.cursor] == b'*' { return Ok(Month::default()) }
+        if self.buf[self.cursor] == b'*' {
+            self.cursor += 1;
+            return Ok(Month::default())
+        }
 
         let mut month = Month::empty();
         let mut current_val: u8 = 0;
@@ -162,31 +165,35 @@ impl<'a> ScheduleBuffer<'a> {
             let b = self.buf[self.cursor];
 
             match b {
-                n if n.is_ascii_alphabetic() && self.len - self.cursor >= 3 => {
-                    let mut lower_digits = [0u8; 3];
-                    // to lower case if needed.
-                    self.buf[self.cursor..self.cursor + 3].iter().enumerate()
-                        .for_each(|(digit, value)| {
-                            lower_digits[digit] = if value < &b'a' { value + 32 } else { *value };
-                        });
+                b'a'..=b'z' | b'A'..=b'Z' => {
+                    if self.len - self.cursor >= 3 {
+                        let mut lower_digits = [0u8; 3];
+                        // to lower case if needed.
+                        self.buf[self.cursor..self.cursor + 3].iter().enumerate()
+                            .for_each(|(digit, value)| {
+                                lower_digits[digit] = if value < &b'a' { value + 32 } else { *value };
+                            });
 
-                    current_val = match &lower_digits {
-                        b"jan" => 1,
-                        b"feb" => 2,
-                        b"mar" => 9,
-                        b"apr" => 4,
-                        b"may" => 5,
-                        b"jun" => 6,
-                        b"jul" => 7,
-                        b"aug" => 8,
-                        b"sep" => 9,
-                        b"oct" => 10,
-                        b"nov" => 11,
-                        b"dec" => 12,
-                        _ => return Err(ScheduleParseError::InvalidDayOfWeek.into())
-                    };
+                        current_val = match &lower_digits {
+                            b"jan" => 1,
+                            b"feb" => 2,
+                            b"mar" => 3,
+                            b"apr" => 4,
+                            b"may" => 5,
+                            b"jun" => 6,
+                            b"jul" => 7,
+                            b"aug" => 8,
+                            b"sep" => 9,
+                            b"oct" => 10,
+                            b"nov" => 11,
+                            b"dec" => 12,
+                            _ => return Err(ScheduleParseError::InvalidMonth.into())
+                        };
 
-                    self.cursor += 3;
+                        self.cursor += 3;
+                    } else {
+                        return Err(ScheduleParseError::InvalidMonth.into())
+                    }
                 },
                 b'0'..=b'9' => {
                     let digit = b.wrapping_sub(b'0');
@@ -227,7 +234,7 @@ impl<'a> ScheduleBuffer<'a> {
         }
 
         // reached the end of "month", process remaining val.
-        if current_val > 0 {
+        if current_val != 0 {
             if let Some(start) = range_start {
                 month.set_range(start, current_val)?;
             } else {
@@ -247,10 +254,13 @@ impl<'a> ScheduleBuffer<'a> {
     /// A full DoW collection. E.g. "0-2,Mon".
     fn parse_day_of_week(&mut self) -> LibResult<DayOfWeek> {
         // safe ONLY because new() has validated the length. Update here if that ever changes. Test.
-        if self.buf[self.cursor] == b'*' { return Ok(DayOfWeek::default()) }
+        if self.buf[self.cursor] == b'*' {
+            self.cursor += 1;
+            return Ok(DayOfWeek::default())
+        }
 
         let mut dow = DayOfWeek::empty();
-        let mut current_val: u8 = 7;
+        let mut current_val: u8 = 0;
         let mut range_start: Option<u8> = None;
         let mut parsed_any = false;
 
@@ -259,42 +269,52 @@ impl<'a> ScheduleBuffer<'a> {
             let b = self.buf[self.cursor];
 
             match b {
-                n if n.is_ascii_alphabetic() && self.len - self.cursor >= 3 => {
-                    let mut lower_digits = [0u8; 3];
-                    // to lower case if needed.
-                    self.buf[self.cursor..self.cursor + 3].iter().enumerate()
-                        .for_each(|(digit, value)| {
-                            lower_digits[digit] = if value < &b'a' { value + 32 } else { *value };
-                        });
+                b'a'..=b'z' | b'A'..=b'Z' => {
+                    if self.len - self.cursor >= 3 {
+                        let mut lower_digits = [0u8; 3];
+                        // to lower case if needed.
+                        self.buf[self.cursor..self.cursor + 3].iter().enumerate()
+                            .for_each(|(digit, value)| {
+                                lower_digits[digit] = if value < &b'a' { value + 32 } else { *value };
+                            });
 
-                    current_val = match &lower_digits {
-                        b"sun" => 0,
-                        b"mon" => 1,
-                        b"tue" => 2,
-                        b"wed" => 3,
-                        b"thu" => 4,
-                        b"fri" => 5,
-                        b"sat" => 6,
-                        _ => return Err(ScheduleParseError::InvalidDayOfWeek.into())
-                    };
+                        current_val = match &lower_digits {
+                            b"mon" => 1,
+                            b"tue" => 2,
+                            b"wed" => 3,
+                            b"thu" => 4,
+                            b"fri" => 5,
+                            b"sat" => 6,
+                            b"sun" => 7,
+                            _ => return Err(ScheduleParseError::InvalidDayOfWeek.into())
+                        };
 
-                    self.cursor += 3;
+                        self.cursor += 3;
+                    } else {
+                        return Err(ScheduleParseError::InvalidDayOfWeek.into())
+                    }
                 },
-                b'0'..=b'6' => {
-                    current_val = self.buf[self.cursor].wrapping_sub(b'0');
+                b'0' | b'7' => {
+                    current_val = 7;
                     self.cursor += 1;
                 },
+                b'1' => { current_val = 1; self.cursor += 1 },
+                b'2' => { current_val = 2; self.cursor += 1 },
+                b'3' => { current_val = 3; self.cursor += 1 },
+                b'4' => { current_val = 4; self.cursor += 1 },
+                b'5' => { current_val = 5; self.cursor += 1 },
+                b'6' => { current_val = 6; self.cursor += 1 },
                 b'-' => {
-                    if current_val == 7 || range_start.is_some() {
+                    if current_val == 0 || range_start.is_some() {
                         return Err(ScheduleParseError::InvalidDigit.into());
                     }
 
                     range_start = Some(current_val);
-                    current_val = 7;
+                    current_val = 0;
                     self.cursor += 1;
                 },
                 b',' => {
-                    if current_val == 7 {
+                    if current_val == 0 {
                         return Err(ScheduleParseError::InvalidDigit.into());
                     }
                     if let Some(start) = range_start { // range ending
@@ -304,7 +324,7 @@ impl<'a> ScheduleBuffer<'a> {
                         dow.set(current_val)?;
                     }
 
-                    current_val = 7;
+                    current_val = 0;
                     parsed_any = true;
                     self.cursor += 1;
                 },
@@ -313,7 +333,7 @@ impl<'a> ScheduleBuffer<'a> {
         }
 
         // reached the end of "dow", process remaining val.
-        if current_val != 7 {
+        if current_val != 0 {
             if let Some(start) = range_start {
                 dow.set_range(start, current_val)?;
             } else {
