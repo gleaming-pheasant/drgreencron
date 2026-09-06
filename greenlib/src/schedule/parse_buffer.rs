@@ -1,23 +1,14 @@
 //! Separate module to prevent accidental creation without validation of length guaranteed by the 
 //! call to [`ScheduleBuffer::parse()`].
-use crate::LibResult;
+use crate::schedule::MONTH_MAX;
+use crate::{LibResult, schedule::DAY_MAX};
 use crate::errors::ScheduleParseError;
 
 use super::{Day, DayOfWeek, Month, Schedule};
 
 pub const DEFAULT_SCHEDULE: &'static str = "* * *";
-const MAX_SCHEDULE_LEN: usize =
-    30 + // commas for 31 days
-    9 + (22 * 2) + // digits for days, 1-9 + double digits up to 31
-    11 + // commas for 12 months
-    (3 * 12) + // 3-char months
-    6 + // commas for days of week
-    (3 * 6); // 3-char DoWs.
-
-enum RangeState {
-    Hold(u8),
-
-}
+const MAX_SCHEDULE_LEN: usize = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,\
+26,27,28,29,30,31 JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC SUN,MON,TUE,WED,THU,FRI,SAT".len();
 
 /// Exists simply to make the code easier to follow and prevent passing around buffer and cursor to 
 /// parse separate components.
@@ -35,7 +26,7 @@ pub(super) struct ScheduleBuffer<'a> {
 
 impl<'a> ScheduleBuffer<'a> {
     /// Create a new `ScheduleBuffer` from the provided buffer.
-    #[inline(always)]
+    #[inline]
     pub(super) fn new(buf: &'a [u8]) -> Self {
         Self {
             buf,
@@ -45,7 +36,6 @@ impl<'a> ScheduleBuffer<'a> {
     }
 
     /// Attempt the parse the contained buffer as a [`Schedule`].
-    #[inline(always)]
     pub(super) fn parse(&mut self) -> LibResult<Schedule> {
         if self.len < DEFAULT_SCHEDULE.len() {
             return Err(ScheduleParseError::TooShort.into());
@@ -89,7 +79,6 @@ impl<'a> ScheduleBuffer<'a> {
     }
 
     /// Parse a full day stream, which can include ranges (e.g. "1-10,25").
-    #[inline(always)]
     fn parse_day(&mut self) -> LibResult<Day> {
         // safe ONLY because new() has validated the length. Update here if that ever changes. Test.
         if self.buf[self.cursor] == b'*' {
@@ -110,7 +99,7 @@ impl<'a> ScheduleBuffer<'a> {
                     let digit = b.wrapping_sub(b'0');
                     current_val = current_val.saturating_mul(10).saturating_add(digit);
 
-                    if current_val > 31 {
+                    if current_val > DAY_MAX {
                         return Err(ScheduleParseError::InvalidValue.into());
                     }
                 },
@@ -159,29 +148,185 @@ impl<'a> ScheduleBuffer<'a> {
         Ok(day)
     }
 
-    #[inline(always)]
     fn parse_month(&mut self) -> LibResult<Month> {
-        todo!()
+        // safe ONLY because new() has validated the length. Update here if that ever changes. Test.
+        if self.buf[self.cursor] == b'*' { return Ok(Month::default()) }
+
+        let mut month = Month::empty();
+        let mut current_val: u8 = 0;
+        let mut range_start: Option<u8> = None;
+        let mut parsed_any = false;
+
+
+        while self.cursor < self.len && self.buf[self.cursor] != b' ' {
+            let b = self.buf[self.cursor];
+
+            match b {
+                n if n.is_ascii_alphabetic() && self.len - self.cursor >= 3 => {
+                    let mut lower_digits = [0u8; 3];
+                    // to lower case if needed.
+                    self.buf[self.cursor..self.cursor + 3].iter().enumerate()
+                        .for_each(|(digit, value)| {
+                            lower_digits[digit] = if value < &b'a' { value + 32 } else { *value };
+                        });
+
+                    current_val = match &lower_digits {
+                        b"jan" => 1,
+                        b"feb" => 2,
+                        b"mar" => 9,
+                        b"apr" => 4,
+                        b"may" => 5,
+                        b"jun" => 6,
+                        b"jul" => 7,
+                        b"aug" => 8,
+                        b"sep" => 9,
+                        b"oct" => 10,
+                        b"nov" => 11,
+                        b"dec" => 12,
+                        _ => return Err(ScheduleParseError::InvalidDayOfWeek.into())
+                    };
+
+                    self.cursor += 3;
+                },
+                b'0'..=b'9' => {
+                    let digit = b.wrapping_sub(b'0');
+                    current_val = current_val.saturating_mul(10).saturating_add(digit);
+
+                    if current_val > MONTH_MAX {
+                        return Err(ScheduleParseError::InvalidValue.into());
+                    }
+
+                    self.cursor += 1;
+                },
+                b'-' => {
+                    if current_val == 0 || range_start.is_some() {
+                        return Err(ScheduleParseError::InvalidDigit.into());
+                    }
+
+                    range_start = Some(current_val);
+                    current_val = 0;
+                    self.cursor += 1;
+                },
+                b',' => {
+                    if current_val == 0 {
+                        return Err(ScheduleParseError::InvalidDigit.into());
+                    }
+                    if let Some(start) = range_start { // range ending
+                        month.set_range(start, current_val)?;
+                        range_start = None;
+                    } else {
+                        month.set(current_val)?;
+                    }
+
+                    current_val = 0;
+                    parsed_any = true;
+                    self.cursor += 1;
+                },
+                _ => return Err(ScheduleParseError::InvalidDigit.into())
+            }
+        }
+
+        // reached the end of "month", process remaining val.
+        if current_val > 0 {
+            if let Some(start) = range_start {
+                month.set_range(start, current_val)?;
+            } else {
+                month.set(current_val)?;
+            }
+            parsed_any = true;
+        }
+
+        // received nothing to parse
+        if !parsed_any {
+            return Err(ScheduleParseError::InvalidValue.into())
+        }
+
+        Ok(month)
     }
 
     /// A full DoW collection. E.g. "0-2,Mon".
     fn parse_day_of_week(&mut self) -> LibResult<DayOfWeek> {
+        // safe ONLY because new() has validated the length. Update here if that ever changes. Test.
         if self.buf[self.cursor] == b'*' { return Ok(DayOfWeek::default()) }
 
-        while self.cursor < self.len {
-            
-            self.cursor += 1;
-        }
-
         let mut dow = DayOfWeek::empty();
+        let mut current_val: u8 = 7;
+        let mut range_start: Option<u8> = None;
+        let mut parsed_any = false;
 
-        // only need to attempt one digit or three alpha bytes for DoW; can only be short name token 
-        // or 0-7.
-        if self.buf[self.cursor].is_ascii_digit() {
-            let val = self.buf[self.cursor].wrapping_sub(b'0');
-            
+
+        while self.cursor < self.len && self.buf[self.cursor] != b' ' {
+            let b = self.buf[self.cursor];
+
+            match b {
+                n if n.is_ascii_alphabetic() && self.len - self.cursor >= 3 => {
+                    let mut lower_digits = [0u8; 3];
+                    // to lower case if needed.
+                    self.buf[self.cursor..self.cursor + 3].iter().enumerate()
+                        .for_each(|(digit, value)| {
+                            lower_digits[digit] = if value < &b'a' { value + 32 } else { *value };
+                        });
+
+                    current_val = match &lower_digits {
+                        b"sun" => 0,
+                        b"mon" => 1,
+                        b"tue" => 2,
+                        b"wed" => 3,
+                        b"thu" => 4,
+                        b"fri" => 5,
+                        b"sat" => 6,
+                        _ => return Err(ScheduleParseError::InvalidDayOfWeek.into())
+                    };
+
+                    self.cursor += 3;
+                },
+                b'0'..=b'6' => {
+                    current_val = self.buf[self.cursor].wrapping_sub(b'0');
+                    self.cursor += 1;
+                },
+                b'-' => {
+                    if current_val == 7 || range_start.is_some() {
+                        return Err(ScheduleParseError::InvalidDigit.into());
+                    }
+
+                    range_start = Some(current_val);
+                    current_val = 7;
+                    self.cursor += 1;
+                },
+                b',' => {
+                    if current_val == 7 {
+                        return Err(ScheduleParseError::InvalidDigit.into());
+                    }
+                    if let Some(start) = range_start { // range ending
+                        dow.set_range(start, current_val)?;
+                        range_start = None;
+                    } else {
+                        dow.set(current_val)?;
+                    }
+
+                    current_val = 7;
+                    parsed_any = true;
+                    self.cursor += 1;
+                },
+                _ => return Err(ScheduleParseError::InvalidDigit.into())
+            }
         }
 
-        todo!()
+        // reached the end of "dow", process remaining val.
+        if current_val != 7 {
+            if let Some(start) = range_start {
+                dow.set_range(start, current_val)?;
+            } else {
+                dow.set(current_val)?;
+            }
+            parsed_any = true;
+        }
+
+        // received nothing to parse
+        if !parsed_any {
+            return Err(ScheduleParseError::InvalidValue.into())
+        }
+
+        Ok(dow)
     }
 }

@@ -11,6 +11,9 @@ pub const DOW_MAX: u8 = 6;
 pub const DAY_MIN: u8 = 1;
 pub const DAY_MAX: u8 = 31;
 
+pub const MONTH_MIN: u8 = 1;
+pub const MONTH_MAX: u8 = 1;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Day {
     bits: u32
@@ -20,18 +23,19 @@ impl Day {
     /// Create a new `Day` with no bits set.
     /// 
     /// This differs from `default`, which has all valid bits set.
-    #[inline(always)]
+    #[inline]
     pub fn empty() -> Self {
         Self { bits: 0 }
     }
 
-    #[inline(always)]
-    pub fn is_set(&self, position: u32) -> bool {
+    /// Return `true` if the given bit is set.
+    #[inline]
+    pub fn is_set(&self, position: u8) -> bool {
         self.bits & (1u32 << position) != 0
     }
 
     /// Set a single day for this `Day`, from its u8 value.
-    #[inline(always)]
+    #[inline]
     pub fn set(&mut self, day: u8) -> LibResult<()> {
         if !(DAY_MIN..DAY_MAX + 1).contains(&day) {
             return Err(ScheduleParseError::InvalidValue.into());
@@ -45,7 +49,6 @@ impl Day {
     /// Set a range of days for this `Day`, from a `from` and an `until` value.
     /// 
     /// Ensures that `from` is before `until`.
-    #[inline(always)]
     pub fn set_range(&mut self, from: u8, until: u8) -> LibResult<()> {
         if from >= until {
             return Err(ScheduleParseError::BadRange.into());
@@ -91,6 +94,53 @@ impl Month {
     pub const OCT: Self = Self { bits: 0b0000_0010_0000_0000 };
     pub const NOV: Self = Self { bits: 0b0000_0100_0000_0000 };
     pub const DEC: Self = Self { bits: 0b0000_1000_0000_0000 };
+
+    /// Create a new `Month` with no bits set.
+    /// 
+    /// This differs from `default`, which has all valid bits set.
+    #[inline]
+    pub fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    /// Return `true` if the given bit is set.
+    #[inline]
+    pub fn is_set(&self, position: u8) -> bool {
+        self.bits & (1u16 << position) != 0
+    }
+
+    /// Set a single day for this `Month`, from its u8 value.
+    #[inline]
+    pub fn set(&mut self, month: u8) -> LibResult<()> {
+        if !(MONTH_MIN..MONTH_MAX + 1).contains(&month) {
+            return Err(ScheduleParseError::InvalidValue.into());
+        }
+
+        self.bits |= 1u16 << month;
+
+        Ok(())
+    }
+
+    /// Set a range of days for this `Month`, from a `from` and an `until` value.
+    /// 
+    /// Ensures that `from` is before `until`.
+    pub fn set_range(&mut self, from: u8, until: u8) -> LibResult<()> {
+        if from >= until {
+            return Err(ScheduleParseError::BadRange.into());
+        }
+
+        let range = MONTH_MIN..MONTH_MAX + 1;
+
+        if !range.contains(&from) || !range.contains(&until) {
+            return Err(ScheduleParseError::InvalidValue.into());
+        }
+
+        for day in from..until + 1 {
+            self.bits |= 1u16 << day;
+        }
+
+        Ok(())
+    }
 }
 
 impl Default for Month {
@@ -112,19 +162,18 @@ impl DayOfWeek {
     pub const THU: Self = Self { bits: 0b0001_0000 };
     pub const FRI: Self = Self { bits: 0b0010_0000 };
     pub const SAT: Self = Self { bits: 0b0100_0000 };
-}
 
-impl DayOfWeek {
     /// Create a new `DayOfWeek` with no bits set.
     /// 
     /// This differs from `default`, which has all valid bits set.
-    #[inline(always)]
+    #[inline]
     pub fn empty() -> Self {
         Self { bits: 0 }
     }
 
-    #[inline(always)]
-    pub fn is_set(&self, position: u32) -> bool {
+    /// Return `true` if the given bit is set.
+    #[inline]
+    pub fn is_set(&self, position: u8) -> bool {
         self.bits & (1u8 << position) != 0
     }
 
@@ -132,7 +181,7 @@ impl DayOfWeek {
     /// 
     /// It is the responsibility of the caller to guarnatee that "7" has been parsed as "0" for 
     /// Sunday.
-    #[inline(always)]
+    #[inline]
     pub fn set(&mut self, day: u8) -> LibResult<()> {
         if !(DOW_MIN..DOW_MAX + 1).contains(&day) {
             return Err(ScheduleParseError::InvalidValue.into());
@@ -149,7 +198,6 @@ impl DayOfWeek {
     /// 
     /// It is the responsibility of the caller to guarnatee that "7" has been parsed as "0" for 
     /// Sunday.
-    #[inline(always)]
     pub fn set_range(&mut self, from: u8, until: u8) -> LibResult<()> {
         if from >= until {
             return Err(ScheduleParseError::BadRange.into());

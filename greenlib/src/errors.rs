@@ -4,6 +4,7 @@ use std::fmt::Display;
 pub enum ScheduleParseError {
     /// Must be inserted in the actual order, where `from` must be a lower value than `to`.
     BadRange,
+    InvalidDayOfWeek,
     InvalidDigit,
     InvalidValue,
     TooLong,
@@ -14,10 +15,11 @@ impl Display for ScheduleParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::BadRange => f.write_str("a range must begin with the lower value"),
+            Self::InvalidDayOfWeek => f.write_str("encountered invalid day of the week name"),
             Self::InvalidDigit => f.write_str("encountered invalid digit in schedule"),
             Self::InvalidValue => f.write_str("encountered invalid value in schedule"),
             Self::TooLong => f.write_str("schedule is too long"),
-            Self::TooShort => f.write_str("Schedule is not long enough, must be at least \"* * *\"")
+            Self::TooShort => f.write_str("schedule is not long enough, must be at least \"* * *\"")
         }
     }
 }
