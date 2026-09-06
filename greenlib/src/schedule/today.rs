@@ -28,7 +28,6 @@ impl Date {
         let era = (if z >= 0 { z } else { z - 146_096 }) / 146_097;
         let doe = (z - era * 146_097) as u32;
         let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-        let y = (yoe as i64) + era * 400;
         let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
         let mp = (5 * doy + 2) / 153;
 
