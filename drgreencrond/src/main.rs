@@ -28,8 +28,6 @@ fn main() {
             tracing::error!("couldn't connect to journald: {}", e);
         }
     }
-
-    let timers = timers::Timers::fetch(); // Validates both files are present. 
-
+    
     let dirs = dirs::Dirs::from_env();
 }

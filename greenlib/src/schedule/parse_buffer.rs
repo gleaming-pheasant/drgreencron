@@ -350,3 +350,199 @@ impl<'a> ScheduleBuffer<'a> {
         Ok(dow)
     }
 }
+
+#[cfg(test)]
+mod parse_buffer_tests {
+    use std::assert_matches;
+
+use crate::LibError;
+
+use super::*;
+
+    #[test]
+    fn test_valid_default() {
+        let buf = "* * *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=31).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((1..=7).all(|bit| parsed_sched.day_of_week.is_set(bit)));
+        assert!((1..=12).all(|bit| parsed_sched.month.is_set(bit)));
+    }
+
+    #[test]
+    fn test_valid_individual_day_of_week_sun_name() {
+        let buf = "* * SUN".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=31).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((1..=12).all(|bit| parsed_sched.month.is_set(bit)));
+        assert!(parsed_sched.day_of_week.is_set(7));
+        assert!((1..=6).all(|bit| !parsed_sched.day_of_week.is_set(bit)));
+    }
+
+    #[test]
+    fn test_valid_individual_day_of_week_sun_zero() {
+        let buf = "* * 0".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=31).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((1..=12).all(|bit| parsed_sched.month.is_set(bit)));
+        assert!(parsed_sched.day_of_week.is_set(7));
+        assert!((1..=6).all(|bit| !parsed_sched.day_of_week.is_set(bit)));
+    }
+
+    #[test]
+    fn test_valid_individual_day_of_week_sun_seven() {
+        let buf = "* * 7".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=31).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((1..=12).all(|bit| parsed_sched.month.is_set(bit)));
+        assert!(parsed_sched.day_of_week.is_set(7));
+        assert!((1..=6).all(|bit| !parsed_sched.day_of_week.is_set(bit)));
+    }
+
+    #[test]
+    fn test_valid_individual_day_of_week_sun_other() {
+        let buf = "* * Wed".as_bytes(); // also mixed case
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=31).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((1..=12).all(|bit| parsed_sched.month.is_set(bit)));
+        assert!(parsed_sched.day_of_week.is_set(3));
+        assert!([1,2,4,5,6,7].iter().all(|bit| !parsed_sched.day_of_week.is_set(*bit)));
+    }
+
+    #[test]
+    fn test_valid_ranges_named() {
+        let buf = "* JAN-jun *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=31).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((1..=6).all(|bit| parsed_sched.month.is_set(bit)));
+        assert!((7..=12).all(|bit| !parsed_sched.month.is_set(bit)));
+        assert!((1..=7).all(|bit| parsed_sched.day_of_week.is_set(bit)));
+    }
+
+    #[test]
+    fn test_valid_ranges_numbered() {
+        let buf = "1-16 * *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!((1..=16).all(|bit| parsed_sched.day.is_set(bit)));
+        assert!((17..=31).all(|bit| !parsed_sched.day.is_set(bit)));
+        assert!((1..=12).all(|bit| parsed_sched.month.is_set(bit)));
+        assert!((1..=7).all(|bit| parsed_sched.day_of_week.is_set(bit)));
+    }
+
+    #[test]
+    fn test_valid_individual_and_ranges() {
+        let buf = "1,15,30 Jan-FEB,11,dec *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parsed_sched = parser.parse().unwrap();
+
+        assert!([1,15,30].iter().all(|bit| parsed_sched.day.is_set(*bit)));
+        assert!((2..=14).all(|bit| !parsed_sched.day.is_set(bit)));
+        assert!((16..=29).all(|bit| !parsed_sched.day.is_set(bit)));
+        assert!(!parsed_sched.day.is_set(31));
+        assert!([1,2,11,12].iter().all(|bit| parsed_sched.month.is_set(*bit)));
+        assert!([3,4,5,6,7,8,9,10].iter().all(|bit| !parsed_sched.month.is_set(*bit)));
+        assert!((1..=7).all(|bit| parsed_sched.day_of_week.is_set(bit)));
+    }
+
+    #[test]
+    fn test_invalid_day_name() {
+        let buf = "1,15,30 Jan-FEB,11,dec tuesday".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidDayOfWeek)
+        )
+    }
+
+    #[test]
+    fn test_invalid_day_name_short() {
+        let buf = "* * f".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidDayOfWeek)
+        )
+    }
+
+    #[test]
+    fn test_invalid_month_name() {
+        let buf = "1-31 sept 0-6".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidMonth)
+        )
+    }
+
+    #[test]
+    fn test_invalid_month_name_short() {
+        let buf = "* d *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidMonth)
+        )
+    }
+
+
+    #[test]
+    fn test_invalid_day_value() {
+        let buf = "32 jan-dec mon-sun".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidValue)
+        )
+    }
+
+    #[test]
+    fn test_invalid_day_digit() {
+        let buf = "x jan-dec mon-sun".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidDigit)
+        )
+    }
+
+    #[test]
+    fn test_invalid_day_value_in_range() {
+        let buf = "1-50 * *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::InvalidValue)
+        )
+    }
+
+    #[test]
+    fn test_invalid_range_order() {
+        let buf = "* Dec-Jun *".as_bytes();
+        let mut parser = ScheduleBuffer::new(buf);
+        let parse_result = parser.parse();
+        assert_matches!(
+            parse_result.unwrap_err(),
+            LibError::ScheduleParseError(ScheduleParseError::BadRange)
+        )
+    }
+}

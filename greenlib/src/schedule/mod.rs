@@ -5,8 +5,8 @@ use crate::{LibError, LibResult, errors::ScheduleParseError};
 mod parse_buffer;
 use parse_buffer::ScheduleBuffer;
 
-pub const DOW_MIN: u8 = 0;
-pub const DOW_MAX: u8 = 6;
+pub const DOW_MIN: u8 = 1;
+pub const DOW_MAX: u8 = 7;
 
 pub const DAY_MIN: u8 = 1;
 pub const DAY_MAX: u8 = 31;
