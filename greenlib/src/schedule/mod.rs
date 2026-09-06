@@ -1,3 +1,5 @@
+pub(crate) mod today;
+
 use std::str::FromStr;
 
 use crate::{LibError, LibResult, errors::ScheduleParseError};
